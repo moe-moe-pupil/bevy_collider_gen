@@ -11,4 +11,5 @@ pub mod prelude {
 
 mod abstract_collider;
 mod collider_type;
+mod plugin;
 mod utils;
