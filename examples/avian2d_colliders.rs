@@ -7,14 +7,14 @@ use edges::EdgesIter;
 use indoc::indoc;
 use std::collections::HashMap;
 
-/// Colliders: Car + Boulder + Terrain
-/// Illustrating how to use PNG files with transparency to generate colliders (and geometry)
-/// for 2d sprites.
-///
-/// Controls
-/// ← ↑ ↓ → (pan camera)
-/// w (zoom in)
-/// d (zoom out)
+// Colliders: Car + Boulder + Terrain
+// Illustrating how to use PNG files with transparency to generate colliders (and geometry)
+// for 2d sprites.
+//
+// Controls
+// ← ↑ ↓ → (pan camera)
+// w (zoom in)
+// d (zoom out)
 
 /// Custom PNG: `convex_polyline` collider
 /// from png path specified as cli argument
