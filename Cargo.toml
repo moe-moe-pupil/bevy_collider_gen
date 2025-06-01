@@ -27,7 +27,7 @@ parallel = ["edges/parallel"]
 [dependencies]
 image = { version = "0.25", default-features = false }
 edges = "0.8"
-bevy = { version = "0.16", default-features = false, features = ["bevy_image"] }
+bevy = { version = "0.16.1", default-features = false, features = ["bevy_image"] }
 
 [dependencies.bevy_rapier2d]
 version = "0.30"
@@ -42,8 +42,8 @@ default-features = false
 features = ["2d", "parry-f32"]
 
 [dev-dependencies]
-bevy = "0.16"
-bevy_prototype_lyon = "0.13"
+bevy = "0.16.1"
+bevy_prototype_lyon = { git = "https://github.com/rparrett/bevy_prototype_lyon", branch = "fix-dynamic-examples" }
 indoc = "2"
 
 [dev-dependencies.bevy_rapier2d]

@@ -1,9 +1,18 @@
 #![allow(clippy::needless_pass_by_value)]
-use bevy::{asset::LoadState, color::palettes::css, prelude::*};
+use crate::css::{BLACK, DARK_CYAN};
+use bevy::{
+    asset::LoadState,
+    color::palettes::css::{self, GRAY},
+    prelude::*,
+};
 use bevy_collider_gen::prelude::*;
-use bevy_prototype_lyon::{prelude::*, shapes};
+use bevy_prototype_lyon::{
+    entity::ShapeBundle,
+    prelude::{tess::GeometryBuilder, *},
+    shapes,
+};
 use bevy_rapier2d::prelude::*;
-use edges::EdgesIter;
+use edges::{Edges, EdgesIter};
 use indoc::indoc;
 use std::collections::HashMap;
 
@@ -59,21 +68,56 @@ fn car_spawn(
         return;
     };
     let sprite_image = image_assets.get(sprite_handle).unwrap();
-    let collider = AbstractCollidersBuilder::try_from(sprite_image)
-        .unwrap()
-        .convex_polyline()
-        .single()
-        .and_then(AbstractCollider::to_rapier)
-        .unwrap();
+    let edges = Edges::try_from(sprite_image).unwrap();
+    let edge_coordinate_groups = edges.multi_translated();
+    for coords in edge_coordinate_groups {
+        let indices: Vec<[u32; 3]> = (0..coords.len())
+            .map(|i| {
+                [
+                    i as u32,
+                    (i + 1) as u32 % (coords.len() as u32),
+                    (i + 1) as u32 % (coords.len() as u32),
+                ]
+            })
+            .collect();
+        let collider =
+            Collider::trimesh_with_flags(coords, indices, TriMeshFlags::FIX_INTERNAL_EDGES)
+                .unwrap();
+        commands.spawn((
+            Car,
+            collider,
+            ColliderMassProperties::MassProperties(MassProperties {
+                local_center_of_mass: Vec2::new(0.0, -1.0),
+                mass: 1000.0,
+                principal_inertia: 10000000.0,
+            }),
+            Ccd::enabled(),
+            RigidBody::Dynamic,
+            Transform::default(),
+            Sprite {
+                image: sprite_handle.clone(),
+                ..default()
+            },
+        ));
+    }
 
-    commands.spawn((
-        Car,
-        collider,
-        Sprite {
-            image: sprite_handle.clone(),
-            ..default()
-        },
-    ));
+    // let collider = AbstractCollidersBuilder::try_from(sprite_image)
+    //     .unwrap()
+    //     .polyline()
+    //     .single()
+    //     .and_then(AbstractCollider::to_rapier)
+    //     .unwrap();
+
+    // commands.spawn((
+    //     Car,
+    //     collider,
+    //     ColliderMassProperties::Mass(100.0),
+    //     Ccd::enabled(),
+    //     Sprite {
+    //         image: sprite_handle.clone(),
+    //         ..default()
+    //     },
+    // ));
 }
 
 /// Terrain: `bevy_rapier2d` heightfield collider
@@ -87,22 +131,21 @@ fn terrain_spawn(
         return;
     };
     let sprite_image = image_assets.get(sprite_handle).unwrap();
-    let collider = AbstractCollidersBuilder::try_from(sprite_image)
-        .unwrap()
-        .vertical(sprite_image.height())
-        .heightfield()
-        .single()
-        .and_then(AbstractCollider::to_rapier)
-        .unwrap();
-
-    commands.spawn((
-        collider,
-        RigidBody::Fixed,
-        Sprite {
-            image: sprite_handle.clone(),
-            ..default()
-        },
-    ));
+    let edges = Edges::try_from(sprite_image).unwrap();
+    let edge_coordinate_groups = edges.multi_translated();
+    for coords in edge_coordinate_groups {
+        let collider = Collider::convex_hull(&coords).unwrap();
+        commands.spawn((
+            Car,
+            collider,
+            Ccd::enabled(),
+            RigidBody::Fixed,
+            Sprite {
+                image: sprite_handle.clone(),
+                ..default()
+            },
+        ));
+    }
 }
 
 /// Boulder: using groups of edge coordinates to create geometry to color fill
@@ -129,20 +172,17 @@ fn boulders_spawn(
             - points.first().unwrap()
             - Vec2::new((sprite_image.width() / 2) as f32, -30.);
         let collider = collider.to_rapier().unwrap();
-        let path = GeometryBuilder::build_as(&shapes::Polygon {
+        let shape = shapes::Polygon {
             points,
             closed: true,
-        });
+        };
 
         commands.spawn((
             collider,
-            ShapeBundle {
-                path,
-                transform: Transform::from_xyz(pos.x, pos.y, 0.),
-                ..default()
-            },
-            Fill::color(css::GRAY),
-            Stroke::new(css::BLACK, 1.),
+            ShapeBuilder::with(&shape)
+                .fill(GRAY)
+                .stroke((BLACK, 1.0))
+                .build(),
             RigidBody::Dynamic,
         ));
     }
